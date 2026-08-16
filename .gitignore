@@ -1,0 +1,52 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Environment files (SECRETS!)
+.env
+*.env
+*.env.local
+
+# Database credentials
+*password*
+*secret*
+*key*
+*credentials*
+
+# Model files (too large for Git)
+*.safetensors
+*.bin
+*.pth
+*.model
+*.onnx
+*.h5
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+output/
+data/*.csv
+lambda_package.zip
+deployment_package/
+
+# Logs
+*.log
+
+# Hugging Face cache
+.cache/

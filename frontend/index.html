@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>DevMeM - Living Memory System</title>
+    <!-- vis-network for Knowledge Graph -->
+    <script type="text/javascript" src="https://unpkg.com/vis-network@9.1.2/dist/vis-network.min.js"></script>
+    <style>
+        /* --- RESET & BASE --- */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #f8f9fa;
+            padding: 20px;
+            color: #1e293b;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 2rem;
+            color: #0f172a;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+        h1 small {
+            font-size: 1rem;
+            font-weight: normal;
+            color: #475569;
+        }
+        .header-actions {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .header-actions button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: 0.2s;
+        }
+        .header-actions button:hover { background: #1d4ed8; }
+        .header-actions button.warning {
+            background: #eab308;
+            color: #0f172a;
+        }
+        .header-actions button.warning:hover { background: #ca8a04; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+        @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            padding: 20px;
+            transition: 0.2s;
+        }
+        .card h2 {
+            font-size: 1.2rem;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #0f172a;
+        }
+        .card h2 .badge {
+            background: #e2e8f0;
+            font-size: 0.7rem;
+            padding: 2px 10px;
+            border-radius: 20px;
+            color: #334155;
+        }
+        textarea, input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            resize: vertical;
+        }
+        textarea { min-height: 80px; }
+        .btn {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 8px;
+        }
+        .btn:hover { background: #1d4ed8; }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-sm {
+            padding: 4px 12px;
+            font-size: 0.8rem;
+        }
+        .output {
+            margin-top: 12px;
+            background: #f1f5f9;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        .memory-item {
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            border-left: 4px solid #2563eb;
+            transition: 0.1s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .memory-item:hover { background: #eef2ff; }
+        .memory-item .title { font-weight: 600; }
+        .memory-item .meta {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-top: 2px;
+        }
+        .memory-detail {
+            background: #f1f5f9;
+            padding: 16px;
+            border-radius: 8px;
+            margin-top: 12px;
+            font-size: 0.9rem;
+            display: none;
+        }
+        .memory-detail.show { display: block; }
+        .source {
+            background: #eef2ff;
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin: 4px 0;
+        }
+        .loading {
+            text-align: center;
+            color: #64748b;
+            padding: 20px;
+        }
+        .flex { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .ask-answer {
+            background: #f1f5f9;
+            padding: 12px;
+            border-radius: 8px;
+            margin: 8px 0;
+            border-left: 4px solid #22c55e;
+        }
+        .ask-sources { margin-top: 8px; }
+
+        /* --- GRAPH MODAL --- */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(4px);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.show { display: flex; }
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 900px;
+            height: 80vh;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .modal-header h3 {
+            font-size: 1.2rem;
+            color: #0f172a;
+        }
+        .modal-header button {
+            background: #e2e8f0;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .modal-header button:hover { background: #cbd5e1; }
+        #graph-container {
+            flex: 1;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background: #ffffff;
+            min-height: 400px;
+        }
+        .graph-legend {
+            display: flex;
+            gap: 16px;
+            font-size: 0.8rem;
+            padding: 8px 0;
+            flex-wrap: wrap;
+        }
+        .graph-legend span {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .dot {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 4px;
+        }
+        .dot-center { background: #2563eb; border: 2px solid #1d4ed8; }
+        .dot-related { background: #22c55e; border: 2px solid #16a34a; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🧠 DevMeM <small>Living Memory System</small></h1>
+
+    <div class="header-actions">
+        <button onclick="seedDatabase()" class="warning">🌱 Seed Database</button>
+        <button onclick="loadTimeline()">🔄 Refresh</button>
+    </div>
+
+    <div class="grid">
+        <!-- LEFT COLUMN -->
+        <div>
+            <!-- Capture -->
+            <div class="card">
+                <h2>📝 Capture Learning</h2>
+                <textarea id="captureInput" placeholder="Describe what you learned..."></textarea>
+                <button class="btn" id="captureBtn">Save Memory</button>
+                <div id="captureResult" class="output" style="display:none;"></div>
+            </div>
+
+            <!-- Ask -->
+            <div class="card" style="margin-top:20px;">
+                <h2>🤖 Ask AI</h2>
+                <input type="text" id="askInput" placeholder="Ask a question about your learnings..." />
+                <button class="btn" id="askBtn">Ask</button>
+                <div id="askResult" class="output" style="display:none;"></div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: Timeline -->
+        <div class="card">
+            <h2>📋 Timeline <span class="badge" id="memoryCount">0</span></h2>
+            <div id="timelineList">
+                <div class="loading">Loading memories...</div>
+            </div>
+            <div id="memoryDetail" class="memory-detail"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ====== GRAPH MODAL ====== -->
+<div id="graphModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>🔗 Knowledge Graph</h3>
+            <button onclick="closeGraph()">Close ✕</button>
+        </div>
+        <div class="graph-legend">
+            <span><span class="dot dot-center"></span> Center Memory</span>
+            <span><span class="dot dot-related"></span> Related Memory</span>
+            <span>🔵 Edge = Relationship</span>
+        </div>
+        <div id="graph-container"></div>
+    </div>
+</div>
+
+<script>
+    // --- Globals ---
+    const API_BASE = '';
+    let currentMemoryId = null;
+
+    // --- Helpers ---
+    function showLoading(el) {
+        el.innerHTML = '<div class="loading">⏳ Loading...</div>';
+    }
+
+    async function fetchJSON(url, options = {}) {
+        const res = await fetch(url, options);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+    }
+
+    function formatDate(ts) {
+        return new Date(ts).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    // --- Seed Database ---
+    async function seedDatabase() {
+        if (!confirm('This will load all seed memories into the database. Continue?')) return;
+        const btn = event.target;
+        btn.disabled = true;
+        btn.textContent = '⏳ Seeding...';
+        try {
+            const data = await fetchJSON('/seed', { method: 'POST' });
+            alert(`✅ Seeded ${data.memories_created} memories and ${data.relationships_created} relationships.`);
+            loadTimeline();
+        } catch (e) {
+            alert('❌ Error: ' + e.message);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '🌱 Seed Database';
+        }
+    }
+
+    // --- Timeline ---
+    async function loadTimeline() {
+        try {
+            const data = await fetchJSON('/memories');
+            const memories = data.memories || [];
+            memoryCount.textContent = memories.length;
+            if (memories.length === 0) {
+                timelineList.innerHTML = '<div class="loading">No memories yet. Capture one or seed the database!</div>';
+                return;
+            }
+            let html = '';
+            memories.forEach(m => {
+                html += `
+                    <div class="memory-item" data-id="${m.id}">
+                        <div>
+                            <div class="title">${m.title || 'Untitled'}</div>
+                            <div class="meta">Conf: ${m.confidence.toFixed(2)} · ${formatDate(m.created_at)}</div>
+                        </div>
+                        <div>
+                            <button class="btn btn-sm" onclick="event.stopPropagation(); showGraph('${m.id}')">🌐 Graph</button>
+                        </div>
+                    </div>
+                `;
+            });
+            timelineList.innerHTML = html;
+            // Click on item -> show details
+            document.querySelectorAll('.memory-item').forEach(el => {
+                el.addEventListener('click', () => showMemoryDetail(el.dataset.id));
+            });
+        } catch (e) {
+            timelineList.innerHTML = `<div class="loading">❌ Error: ${e.message}</div>`;
+        }
+    }
+
+    async function showMemoryDetail(id) {
+        try {
+            const data = await fetchJSON(`/memory/${id}`);
+            currentMemoryId = id;
+            let relHtml = '';
+            if (data.related_memories && data.related_memories.length) {
+                relHtml = '<p><strong>Related Memories:</strong></p><ul>';
+                data.related_memories.forEach(r => {
+                    relHtml += `<li>${r.title} (${r.relation_type})</li>`;
+                });
+                relHtml += '</ul>';
+            } else {
+                relHtml = '<p><em>No related memories.</em></p>';
+            }
+            memoryDetail.innerHTML = `
+                <h3>${data.title}</h3>
+                <p><strong>Problem:</strong> ${data.problem}</p>
+                <p><strong>Cause:</strong> ${data.cause}</p>
+                <p><strong>Fix:</strong> ${data.fix}</p>
+                <p><strong>Lesson:</strong> ${data.lesson}</p>
+                <p><strong>Technologies:</strong> ${data.technologies ? data.technologies.join(', ') : 'N/A'}</p>
+                <p><strong>Confidence:</strong> ${data.confidence.toFixed(2)} · <strong>Frequency:</strong> ${data.frequency}</p>
+                ${relHtml}
+                <div class="flex" style="margin-top:10px;">
+                    <button class="btn btn-sm" onclick="showGraph('${data.id}')">🌐 View Knowledge Graph</button>
+                    <button class="btn btn-sm" onclick="memoryDetail.classList.remove('show')" style="background:#e2e8f0;color:#1e293b;">Close</button>
+                </div>
+            `;
+            memoryDetail.classList.add('show');
+        } catch (e) {
+            memoryDetail.innerHTML = `<p>❌ Error: ${e.message}</p>`;
+            memoryDetail.classList.add('show');
+        }
+    }
+
+    // --- Knowledge Graph (vis-network) ---
+    function openGraphModal() {
+        document.getElementById('graphModal').classList.add('show');
+    }
+
+    function closeGraph() {
+        document.getElementById('graphModal').classList.remove('show');
+        // Clear container to prevent duplicates
+        document.getElementById('graph-container').innerHTML = '';
+    }
+
+    async function showGraph(memoryId) {
+        openGraphModal();
+        const container = document.getElementById('graph-container');
+        container.innerHTML = '<div class="loading" style="padding:40px;">Loading graph...</div>';
+
+        try {
+            const data = await fetchJSON(`/memory/${memoryId}`);
+            // Build nodes
+            const nodes = [];
+            const edges = [];
+
+            // Center node
+            nodes.push({
+                id: data.id,
+                label: data.title.length > 30 ? data.title.substring(0, 30) + '...' : data.title,
+                color: '#2563eb',
+                font: { color: 'white', face: 'system-ui' },
+                shape: 'dot',
+                size: 35,
+                borderWidth: 3,
+                borderColor: '#1d4ed8'
+            });
+
+            // Related nodes
+            const related = data.related_memories || [];
+            related.forEach(r => {
+                nodes.push({
+                    id: r.id,
+                    label: r.title.length > 30 ? r.title.substring(0, 30) + '...' : r.title,
+                    color: '#22c55e',
+                    font: { color: 'white', face: 'system-ui' },
+                    shape: 'dot',
+                    size: 25,
+                    borderWidth: 2,
+                    borderColor: '#16a34a'
+                });
+                edges.push({
+                    from: data.id,
+                    to: r.id,
+                    label: r.relation_type || 'related',
+                    font: { align: 'top', size: 10 },
+                    color: '#94a3b8',
+                    width: 2
+                });
+            });
+
+            // If no related nodes, add a placeholder message
+            if (nodes.length === 1) {
+                nodes.push({
+                    id: 'placeholder',
+                    label: 'No related memories yet',
+                    color: '#cbd5e1',
+                    font: { color: '#475569' },
+                    shape: 'text',
+                    size: 20
+                });
+                edges.push({
+                    from: data.id,
+                    to: 'placeholder',
+                    color: '#cbd5e1',
+                    dashes: true,
+                    width: 1
+                });
+            }
+
+            const networkData = { nodes, edges };
+            const options = {
+                nodes: {
+                    shape: 'dot',
+                    size: 30,
+                    font: { size: 12, face: 'system-ui' }
+                },
+                edges: {
+                    smooth: { type: 'cubicBezier', roundness: 0.4 },
+                    arrows: { to: { enabled: false } }
+                },
+                physics: {
+                    enabled: true,
+                    stabilization: { iterations: 100 },
+                    barnesHut: { gravitationalConstant: -8000, springConstant: 0.001 }
+                },
+                interaction: {
+                    navigationButtons: true,
+                    keyboard: true
+                }
+            };
+
+            // Render
+            container.innerHTML = '';
+            const network = new vis.Network(container, networkData, options);
+
+            // Fit view after a short delay
+            setTimeout(() => network.fit({ animation: true }), 300);
+        } catch (e) {
+            container.innerHTML = `<div class="loading" style="color:red;">❌ Failed to load graph: ${e.message}</div>`;
+        }
+    }
+
+    // --- Capture ---
+    document.getElementById('captureBtn').addEventListener('click', async () => {
+        const text = document.getElementById('captureInput').value.trim();
+        if (!text) { alert('Please enter some text.'); return; }
+        const btn = event.target;
+        btn.disabled = true;
+        const resultEl = document.getElementById('captureResult');
+        resultEl.style.display = 'block';
+        resultEl.textContent = '⏳ Saving...';
+
+        try {
+            const data = await fetchJSON('/capture', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ raw_text: text })
+            });
+            resultEl.textContent = JSON.stringify(data, null, 2);
+            document.getElementById('captureInput').value = '';
+            loadTimeline();
+        } catch (e) {
+            resultEl.textContent = `❌ Error: ${e.message}`;
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
+    // --- Ask ---
+    document.getElementById('askBtn').addEventListener('click', async () => {
+        const q = document.getElementById('askInput').value.trim();
+        if (!q) { alert('Please enter a question.'); return; }
+        const btn = event.target;
+        btn.disabled = true;
+        const resultEl = document.getElementById('askResult');
+        resultEl.style.display = 'block';
+        resultEl.innerHTML = '⏳ Thinking...';
+
+        try {
+            const data = await fetchJSON('/ask', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question: q })
+            });
+            let html = `<div class="ask-answer">${data.answer.replace(/\n/g, '<br>')}</div>`;
+            if (data.sources && data.sources.length) {
+                html += '<div class="ask-sources"><strong>Sources:</strong>';
+                data.sources.forEach(s => {
+                    html += `<div class="source">📌 ${s.title} (sim: ${(s.similarity*100).toFixed(1)}%)</div>`;
+                });
+                html += '</div>';
+            } else {
+                html += '<p><em>No sources found.</em></p>';
+            }
+            resultEl.innerHTML = html;
+        } catch (e) {
+            resultEl.innerHTML = `❌ Error: ${e.message}`;
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
+    // --- Enter key for Ask ---
+    document.getElementById('askInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') document.getElementById('askBtn').click();
+    });
+
+    // --- Close graph on modal background click ---
+    document.getElementById('graphModal').addEventListener('click', function(e) {
+        if (e.target === this) closeGraph();
+    });
+
+    // --- Initial Load ---
+    loadTimeline();
+</script>
+</body>
+</html>
