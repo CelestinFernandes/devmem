@@ -1,121 +1,292 @@
 # DevMeM - Living Memory System
 
-## Overview
-DevMeM is an AI-powered system that captures, organizes, and retrieves developer memories using semantic search and vector embeddings. It learns from past issues, solutions, and lessons to help developers solve problems faster.
+> An AI-powered system that captures, organizes, and retrieves developer memories using semantic search and vector embeddings.
 
-## CockroachDB Tools Integration
-
-This project meets hackathon requirements by using **2 CockroachDB tools**:
-
-### 1. **CockroachDB Cloud Managed MCP Server**
-- **Endpoint**: `https://cockroachlabs.cloud/mcp`
-- **Use Case**: Secure agent connection to CockroachDB cluster
-- **Configuration** (`.env`):
-  ```
-  MCP_SERVER_ENDPOINT="https://cockroachlabs.cloud/mcp"
-  MCP_CLUSTER_ID="j228c0103-4981-4f6d-a0f9-806bbc2a4b9d"
-  DATABASE_URL="postgresql://user:password@jagged-otter-31419.j77.aws-ap-south-1.cockroachlabs.cloud:26257/devmem_db?sslmode=require"
-  ```
-- **Benefits**: 
-  - Safe by default with read-only mode option
-  - Full audit logging
-  - Zero custom proxy required
-  - Native integration with AI agents
-
-### 2. **CockroachDB Distributed Vector Indexing**
-- **Use Case**: Store, index, and query embeddings for semantic search & RAG pipeline
-- **Implementation**:
-  - Vector extension enabled in `setup_db.py`:
-    ```sql
-    CREATE EXTENSION IF NOT EXISTS vector;
-    ```
-  - 384-dimensional embeddings stored in memories table:
-    ```sql
-    embedding vector(384)
-    ```
-  - Fast similarity search using `<=>` operator (`repositories/cockroach_repository.py`):
-    ```python
-    cur.execute("""
-        SELECT id, title, problem, cause, fix, lesson, technologies,
-               1 - (embedding <=> %s::vector) AS similarity
-        FROM memories
-        ORDER BY embedding <=> %s::vector
-        LIMIT %s
-    """)
-    ```
-- **Benefits**:
-  - No separate vector store needed
-  - Distributed indexing for scale
-  - No consistency gaps between vector data and operational DB
-  - Ideal for long-term agent memory
+**🎬 [Demo](https://devmem.netlify.app/) | 📹 [Video Demo](#) (coming soon) | 🏗️ [Architecture](#architecture)**
 
 ---
 
-## Architecture
+## ⚡ Quick Start
 
-### Core Components
-
-1. **CockroachDB Backend** - Distributed vector database for memories
-2. **Embedding Service** - Generates 384-dim embeddings via Hugging Face API
-3. **Memory Service** - RAG pipeline with semantic search & deduplication
-4. **Extraction Service** - Parses developer memories (problem, cause, fix, lesson)
-5. **Synthesis Service** - Generates contextual responses using AI
-6. **FastAPI Frontend** - REST API for capture, search, and retrieval
-
-### Data Flow
-
+### 1. Clone & Install
+```bash
+pip install -r requirements.txt
+cp .env.example .env
+# Fill in your DATABASE_URL, HF_TOKEN, GEMINI_API_KEY
 ```
-Developer Input
-    ↓
-Extraction Service (AI extraction)
-    ↓
-Embedding Service (Hugging Face)
-    ↓
-CockroachDB Vector Search (find similar memories)
-    ↓
-Duplicate Detection (similarity > 0.90) → bump confidence
-Related Detection (similarity > 0.75) → create relationships
-    ↓
-Store in CockroachDB (with vector embedding)
-    ↓
-Synthesis Service (generate response using related memories)
-    ↓
-Return to Developer
+
+### 2. Initialize Database
+```bash
+python setup_db.py
 ```
+
+This creates:
+- `devmem_db` database (if not exists)
+- `memories` table with `vector(384)` column for embeddings
+- `relationships` table for linking related memories
+- Vector indexing for fast similarity search
+
+### 3. (Optional) Seed with Sample Memories
+
+**Option A: Quick local test with 3 examples**
+```bash
+python seed_good_memories.py
+```
+
+**Option B: Bulk seed via API/UI**
+- Use the **Seed Database** button in the web UI, or
+- `POST /seed` endpoint (loads from `output/labeled_clusters.json`)
+
+### 4. Run Locally
+```bash
+python main.py
+# Visit http://localhost:8000
+```
+
+### 5. Deploy to Netlify (Frontend) + AWS Lambda (Backend)
+See [Deployment Guide](#-deployment) below.
 
 ---
 
-## API Endpoints
+## 🎯 What Is DevMeM?
 
-### Capture Memory
+DevMeM learns from your past issues and solutions. When you:
+- **Capture** a learning (problem + fix + lesson)
+- **Ask** a question
+
+...it searches your memory for similar past experiences and gives you context-aware answers.
+
+**Key features:**
+- 🔍 Semantic search via vector embeddings
+- 🚫 Automatic deduplication (no duplicate learnings)
+- 🔗 Relationship mapping between related memories
+- 📊 Confidence scoring & frequency tracking
+- 🧠 RAG pipeline for AI responses
+- 📈 Scales to 10K+ memories with CockroachDB
+
+---
+
+## 🏗️ Architecture
+
+### High-Level Flow
 ```
+Developer Input (raw text)
+    ↓
+Extraction Service (AI parses: problem, cause, fix, lesson)
+    ↓
+Embedding Service (Hugging Face: 384-dim vector)
+    ↓
+Vector Search (find similar memories in CockroachDB)
+    ↓
+Duplicate Detection (>90% match) → bump confidence
+Related Detection (>75% match) → create relationship
+    ↓
+Store in CockroachDB with embedding
+    ↓
+Synthesis Service (AI generates response using retrieved memories)
+    ↓
+Return answer to developer
+```
+
+### Components
+
+| Component | Purpose | Tech |
+|-----------|---------|------|
+| **Frontend** | Web UI for capture/ask/explore | Static HTML/JS, Netlify |
+| **Backend API** | REST endpoints | FastAPI, AWS Lambda |
+| **Database** | Store memories + vectors | CockroachDB Cloud |
+| **Embedding** | Generate vectors | Hugging Face (MiniLM) |
+| **Extraction** | Parse learnings | Gemini 3.6 Flash |
+| **Synthesis** | Generate answers | Gemini 3.6 Flash |
+
+---
+
+## 📋 API Documentation
+
+### 1. Capture Learning
+**Save a new learning to memory**
+
+```bash
 POST /capture
+Content-Type: application/json
+
 {
-  "raw_text": "Fixed OOM by increasing heap size to 2GB"
+  "raw_text": "Pod crashed with OOMKilled. Increased memory from 512Mi to 1Gi and it resolved."
 }
 ```
 
-### Search Memories
-```
-GET /memories?query=memory%20optimization
+**Response:**
+```json
+{
+  "status": "new",
+  "memory_id": "550e8400-e29b-41d4-a716-446655440000",
+  "duplicate": false,
+  "related_count": 2,
+  "message": "New memory saved with 2 related links."
+}
 ```
 
-### Ask AI with Memory Context
-```
+**Status codes:**
+- `"new"` → Memory saved
+- `"duplicate"` → Already exists; confidence bumped
+
+---
+
+### 2. Ask Question
+**Search memories and get an AI answer**
+
+```bash
 POST /ask
+Content-Type: application/json
+
 {
-  "question": "How do I optimize memory usage?"
+  "question": "How do I fix OOM errors in Kubernetes?"
 }
 ```
 
-### Seed Database
+**Response:**
+```json
+{
+  "answer": "Based on past experience:\nProblem: Pod crashed with OOMKilled\nSolution: Increase memory request/limit\nLesson: Always profile memory before deployment",
+  "sources": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "title": "Kubernetes OOM issue fixed",
+      "similarity": 0.92
+    }
+  ]
+}
 ```
+
+---
+
+### 3. Get All Memories
+**Retrieve memory timeline**
+
+```bash
+GET /memories
+```
+
+**Response:**
+```json
+{
+  "memories": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "title": "Kubernetes OOM issue fixed",
+      "problem": "Pod crashed with OOMKilled",
+      "cause": "Memory request too low",
+      "fix": "Increased from 512Mi to 1Gi",
+      "lesson": "Always profile memory",
+      "technologies": ["kubernetes", "docker"],
+      "confidence": 0.85,
+      "frequency": 3,
+      "created_at": "2024-01-15T10:30:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### 4. Get Single Memory
+**Retrieve a memory with related learnings**
+
+```bash
+GET /memory/{memory_id}
+```
+
+**Response:**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "title": "Kubernetes OOM issue fixed",
+  "problem": "Pod crashed with OOMKilled",
+  "related_memories": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "title": "Memory profiling best practices",
+      "relation_type": "related"
+    }
+  ]
+}
+```
+
+---
+
+### 5. Seed Database
+**Load example learnings (demo data)**
+
+```bash
 POST /seed
 ```
 
+**Response:**
+```json
+{
+  "memories_created": 15,
+  "relationships_created": 8
+}
+```
+
 ---
 
-## Database Schema
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| **Frontend** | HTML5, JavaScript, vis-network (graph visualization) |
+| **Backend** | Python 3.10+, FastAPI |
+| **Database** | CockroachDB Cloud (distributed, vector-native) |
+| **Embeddings** | Hugging Face `sentence-transformers/all-MiniLM-L6-v2` (384-dim) |
+| **AI Models** | Google Gemini 3.6 Flash (extraction & synthesis) |
+| **Deployment** | AWS Lambda + API Gateway, Netlify (frontend) |
+| **Libraries** | psycopg2, requests, numpy, uvicorn, mangum |
+
+---
+
+## 🚀 Deployment
+
+### Frontend → Netlify
+
+1. **Update API Base URL** in `frontend/index.html`:
+   ```javascript
+   const API_BASE = 'https://your-lambda-endpoint.execute-api.region.amazonaws.com/default';
+   ```
+
+2. **Deploy**:
+   - Go to [app.netlify.com/drop](https://app.netlify.com/drop)
+   - Drag `frontend/index.html` into the drop zone
+   - Done! Your frontend is live
+
+---
+
+### Backend → AWS Lambda
+
+1. **Package the app**:
+   ```bash
+   python lambda_deploy.py
+   ```
+
+2. **Upload `lambda_package.zip` to AWS Lambda**:
+   - Create a new Lambda function or update existing
+   - Upload the ZIP file
+   - Set handler to `main.handler`
+   - Configure environment variables (copy from `.env`)
+   - Set memory to ≥1024 MB, timeout to ≥30 seconds
+
+3. **Create API Gateway trigger**:
+   - Create REST API in API Gateway
+   - Set up `ANY` method on `/{proxy+}` resource
+   - Point to your Lambda function
+   - Deploy to stage (e.g., `default`)
+   - Get the invoke URL
+
+4. **Update frontend** with your Lambda API URL and redeploy to Netlify
+
+---
+
+## 🗄️ Database Schema
 
 ### Memories Table
 ```sql
@@ -150,125 +321,124 @@ CREATE TABLE relationships (
 
 ---
 
-## Setup & Installation
+## ⚙️ Configuration
 
-### Prerequisites
-- Python 3.10+
-- CockroachDB Cloud account
-- Hugging Face API token
-- AWS region configured
+Create a `.env` file from `.env.example`:
 
-### Environment Variables
 ```env
-DATABASE_URL=postgresql://user:password@host:26257/devmem_db?sslmode=require
-MCP_SERVER_ENDPOINT=https://cockroachlabs.cloud/mcp
-MCP_CLUSTER_ID=your-cluster-id
-HF_TOKEN=your-hugging-face-token
-HF_MODEL=google/flan-t5-large
-GEMINI_API_KEY=your-gemini-api-key
-AWS_REGION=ap-south-1
-USE_BEDROCK=false
+# Database (required)
+DATABASE_URL="postgresql://user:pass@host:26257/devmem_db?sslmode=require"
+
+# Embeddings (required)
+HF_TOKEN="hf_your_token_here"
+HF_MODEL="sentence-transformers/all-MiniLM-L6-v2"
+
+# AI Extraction & Synthesis (required)
+GEMINI_API_KEY="your_gemini_api_key_here"
+
+# AWS / Optional
+AWS_REGION="ap-south-1"
+USE_BEDROCK="false"
+
+# MCP (optional)
+MCP_SERVER_ENDPOINT="https://cockroachlabs.cloud/mcp"
+MCP_CLUSTER_ID="your-cluster-id"
 ```
 
-### Installation
+---
+
+## 🔧 CockroachDB Integration
+
+DevMeM uses **2 CockroachDB features**:
+
+### 1. Vector Indexing
+- Stores 384-dimensional embeddings in `memories.embedding`
+- Fast similarity search via `<=>` operator:
+  ```sql
+  SELECT id, similarity
+  FROM memories
+  ORDER BY embedding <=> query_vector
+  LIMIT 3
+  ```
+- No separate vector store needed; vectors live with operational data
+
+### 2. MCP (Model Context Protocol)
+- Secure agent connectivity to CockroachDB cluster
+- Audit logging + role-based access
+- Configuration in `.env` + `setup_db.py`
+
+---
+
+## 📊 AWS Usage
+
+| Service | Purpose | Cost |
+|---------|---------|------|
+| **Lambda** | API backend (pay-per-request) | ~$0.20/million requests |
+| **API Gateway** | REST endpoint + CORS | ~$3.50/million requests |
+| **CloudWatch** | Logs | ~$0.50/GB |
+| **VPC** (optional) | Network isolation | Free (shared) |
+
+**Typical monthly cost**: <$5 if <1M API calls/month
+
+---
+
+## 🐛 Known Issues & Limitations
+
+| Issue | Impact | Workaround |
+|-------|--------|-----------|
+| **Gemini timeout** | Extraction/synthesis may fail | Falls back to keyword-based extraction |
+| **No auth** | Anyone can call the API | Add API key validation (TODO) |
+| **MiniLM embedding** | Fixed to 384 dimensions | Fine for most use cases |
+| **Single Lambda** | Cold starts (~3-5s) | Use Lambda Provisioned Concurrency for production |
+| **No caching** | Repeated queries re-search DB | Add Redis caching (TODO) |
+| **Frontend**: Graph nodes | Very long titles wrap poorly | Implemented text truncation + tooltips |
+
+---
+
+## 🧪 Testing Locally
+
+### Test Capture
 ```bash
-pip install -r requirements.txt
-python setup_db.py              # Initialize database
-python main.py                  # Start API server
+curl -X POST http://localhost:8000/capture \
+  -H "Content-Type: application/json" \
+  -d '{"raw_text": "My Docker container kept crashing. Added health checks and it fixed the issue."}'
+```
+
+### Test Ask
+```bash
+curl -X POST http://localhost:8000/ask \
+  -H "Content-Type: application/json" \
+  -d '{"question": "How do I debug container crashes?"}'
+```
+
+### Test Get Memories
+```bash
+curl http://localhost:8000/memories
 ```
 
 ---
 
-## Key Features
+## 🔐 Hackathon Requirements
 
-✅ **Semantic Memory Search** - Find similar issues & solutions instantly  
-✅ **Automatic Deduplication** - Prevent duplicate memories from cluttering the database  
-✅ **Relationship Mapping** - Discover connections between related memories  
-✅ **Confidence Scoring** - Track how reliable each memory is  
-✅ **Vector-Powered RAG** - Context-aware AI responses using retrieved memories  
-✅ **Scalable Storage** - CockroachDB distributed indexing for 10K+ memories  
-
----
-
-## Tech Stack
-
-- **Database**: CockroachDB Cloud (distributed vector database)
-- **Backend**: FastAPI + Python
-- **Embeddings**: Hugging Face (sentence-transformers)
-- **AI Models**: Google Flan-T5 + Gemini API
-- **Frontend**: Static HTML/JS
-- **Deployment**: AWS Lambda + API Gateway
+✅ **CockroachDB Cloud Managed MCP** - Secure cluster connectivity  
+✅ **Distributed Vector Indexing** - Semantic search & RAG  
+✅ **Scalable to 10K+ memories** - Production-ready distributed DB  
+✅ **Full audit trail** - Via MCP  
+✅ **Production-ready** - Lambda + API Gateway deployment  
 
 ---
 
-## Hackathon Submission Checklist
+## 📝 License
 
-✅ Uses **CockroachDB Cloud Managed MCP Server** for secure cluster connectivity  
-✅ Uses **CockroachDB Distributed Vector Indexing** for semantic search & RAG  
-✅ Full audit trail with MCP  
-✅ Production-ready distributed database  
-✅ Scalable to thousands of memories  
-
----
-
-## License
 MIT
-- Build artifacts (`deployment_package/`, `lambda_package.zip`)
-
-All sensitive variables are loaded from the environment using `python-dotenv`.
 
 ---
 
-## Deployment to AWS Lambda (Optional)
+## 🙏 Acknowledgements
 
-The included `lambda_deploy.py` script packages the application and its dependencies into `lambda_package.zip`. To deploy:
-
-```bash
-python lambda_deploy.py
-```
-
-Then upload the ZIP to your Lambda function and set:
-- **Handler**: `main.handler`
-- **Memory**: ≥ 1024 MB
-- **Timeout**: ≥ 30 seconds
-- **Environment variables**: the same as your `.env` file
-
-**Note:** This is optional – the system runs perfectly locally without any AWS services.
-
----
-
-## Troubleshooting
-
-| Issue | Solution |
-|-------|----------|
-| `ModuleNotFoundError` | Re‑run `pip install -r requirements.txt` (or the manual install) |
-| `FileNotFoundError: prompts/...` | Make sure the `prompts/` folder exists and contains both `.md` files. |
-| `psycopg2.errors.InvalidTextRepresentation` | Ensure `technologies` is passed as a list (the repository converts it to a PostgreSQL array). |
-| Model download fails | Set a Hugging Face token (`HF_TOKEN`) in your environment or log in with `hf auth login`. |
-| High memory usage | Use `flan-t5-base` instead of `-large` by changing `HF_MODEL`. |
-
----
-
-## Contributing
-
-This project was built for the CockroachDB Hackathon. Contributions, issues, and feature requests are welcome.  
-Please ensure:
-- All secrets are externalized.
-- New AI models are documented.
-- API contracts remain backward‑compatible.
-
----
-
-## License
-
-To add
-
----
-
-## Acknowledgements
-
-- **CockroachDB** for the cloud database with native vector indexing.
-- **Hugging Face** for the transformer models.
-- **Open‑source community** for `sentence-transformers`, FastAPI, and `vis-network`.
+- **CockroachDB** for native vector support
+- **Hugging Face** for open-source embeddings
+- **Google Gemini** for extraction & synthesis
+- **Open-source community** for FastAPI, vis-network, and psycopg2
 
 ---
