@@ -25,23 +25,23 @@ def text_similarity(a, b):
 # Load and sample data
 # ------------------------------
 def load_and_sample(csv_path, n=60):
-    print(f"📂 Loading data from {csv_path} ...")
+    print(f" Loading data from {csv_path} ...")
     try:
         df = pd.read_csv(csv_path, encoding='utf-8')
     except UnicodeDecodeError:
         df = pd.read_csv(csv_path, encoding='latin-1')
-    print(f"   ✅ Loaded {len(df)} records.")
+    print(f"    Loaded {len(df)} records.")
 
     # Keep only rows with non‑empty summary or description
     df = df[df['summary'].notna() | df['description'].notna()].copy()
-    print(f"   🔍 Filtered to {len(df)} with text.")
+    print(f"    Filtered to {len(df)} with text.")
 
     # We don't have Status/Resolution, so just sample randomly
     # but we can prioritise longer descriptions (more information)
     df['text_len'] = df['description'].fillna('').apply(len)
     df = df.sort_values('text_len', ascending=False)
     sampled = df.head(n).sample(frac=1, random_state=RANDOM_SEED).reset_index(drop=True)
-    print(f"   ✅ Sampled {len(sampled)} records (prioritising longer descriptions).")
+    print(f"    Sampled {len(sampled)} records (prioritising longer descriptions).")
     return sampled
 
 # ------------------------------
@@ -172,7 +172,7 @@ def build_clusters(memories):
 # Main
 # ------------------------------
 def main():
-    print("\n🚀 DevMeM Seed Data Generator")
+    print("\n DevMeM Seed Data Generator")
     print("==============================")
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -180,16 +180,16 @@ def main():
     # 1. Load & sample
     df = load_and_sample(CSV_FILE, n=80)
     if df is None or df.empty:
-        print("❌ No data loaded. Check your CSV file path.")
+        print(" No data loaded. Check your CSV file path.")
         return
 
     # 2. Convert to memories
     print("🔄 Converting rows to memories...")
     memories = [row_to_memory(row) for _, row in df.iterrows()]
-    print(f"   ✅ Generated {len(memories)} memory objects.")
+    print(f"    Generated {len(memories)} memory objects.")
 
     # 3. Build clusters
-    print("📦 Building clusters (duplicate, related, distinct)...")
+    print(" Building clusters (duplicate, related, distinct)...")
     clusters = build_clusters(memories)
 
     # 4. Assemble final JSON
@@ -209,7 +209,7 @@ def main():
     with open(OUTPUT_FILE, 'w') as f:
         json.dump(final, f, indent=2)
 
-    print(f"\n✅ Done! Saved to: {OUTPUT_FILE}")
+    print(f"\n Done! Saved to: {OUTPUT_FILE}")
     print(f"   - Total memories: {len(memories)}")
     print(f"   - Total clusters: {len(clusters)}")
     print("   - Cluster breakdown:")

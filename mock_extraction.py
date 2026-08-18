@@ -10,7 +10,6 @@ def mock_bedrock_extract(raw_text):
     # A super simple rule-based extraction (just for testing)
     words = raw_text.split()
     
-    # Dummy logic to make it look real
     if "pod" in raw_text.lower() or "container" in raw_text.lower():
         problem = "Container crashed due to resource limit"
         cause = "Memory limit set too low"
@@ -51,7 +50,7 @@ def mock_bedrock_extract(raw_text):
 if __name__ == "__main__":
     test_text = "My Kubernetes pod got OOMKilled yesterday because memory limit was 512Mi but it needed 1Gi."
     result = mock_bedrock_extract(test_text)
-    print("✅ Mock Extraction Result:")
+    print(" Mock Extraction Result:")
     print(json.dumps(result, indent=2))
     
     # Now test it with your embedding model
@@ -61,5 +60,5 @@ if __name__ == "__main__":
     # Build the embedding text (problem + cause + technologies)
     embed_text = result['problem'] + " " + result['cause'] + " " + " ".join(result['technologies'])
     embedding = model.encode(embed_text)
-    print(f"\n✅ Embedding generated: {len(embedding)} dimensions")
+    print(f"\n Embedding generated: {len(embedding)} dimensions")
     print(f"First 5 numbers: {embedding[:5]}")

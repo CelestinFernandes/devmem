@@ -7,7 +7,7 @@ from sentence_transformers import SentenceTransformer
 DB_URL = os.getenv("DATABASE_URL")
 DB_URL = f"{DB_URL}"
 
-print("🧠 Loading MiniLM...")
+print(" Loading MiniLM...")
 model = SentenceTransformer('all-MiniLM-L6-v2')
 
 good_memories = [
@@ -66,9 +66,9 @@ for mem in good_memories:
         'ACTIVE',
         1
     ))
-    print(f"✅ Inserted: {mem['title']}")
+    print(f" Inserted: {mem['title']}")
 
 conn.commit()
 cur.close()
 conn.close()
-print("🎉 All good memories inserted!")
+print(" All good memories inserted!")

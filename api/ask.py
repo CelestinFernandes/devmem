@@ -4,7 +4,6 @@ from pydantic import BaseModel
 from typing import List, Optional
 import uuid
 
-# These will be injected
 router = APIRouter()
 memory_service = None
 synthesis_service = None

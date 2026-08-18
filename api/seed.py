@@ -56,7 +56,7 @@ async def seed_database():
             embed_text = f"{problem} {cause} {techs}"
             
             # Generate embedding
-            embedding = model.encode(embed_text).tolist()
+            embedding = embedding_service.encode(embed_text).tolist()
 
             # Save to database
             repo.save_memory(mem_data, embedding)

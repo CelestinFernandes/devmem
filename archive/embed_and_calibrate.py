@@ -14,19 +14,19 @@ OUTPUT_FILE = "output/calibration_results.json"
 # ------------------------------
 # Load the labeled seed data
 # ------------------------------
-print("📂 Loading labeled seed data...")
+print(" Loading labeled seed data...")
 with open(INPUT_FILE, 'r') as f:
     data = json.load(f)
 
 clusters = data['clusters']
-print(f"✅ Loaded {len(clusters)} clusters.")
+print(f" Loaded {len(clusters)} clusters.")
 
 # ------------------------------
 # Load MiniLM model
 # ------------------------------
-print("🧠 Loading MiniLM embedding model...")
+print(" Loading MiniLM embedding model...")
 model = SentenceTransformer('all-MiniLM-L6-v2')
-print("✅ Model loaded.")
+print(" Model loaded.")
 
 # ------------------------------
 # Build embedding text (problem + cause + technologies)
@@ -41,7 +41,7 @@ def get_embedding_text(memory):
 # ------------------------------
 # Generate embeddings for all memories
 # ------------------------------
-print("📊 Generating embeddings...")
+print(" Generating embeddings...")
 all_memories = []
 all_embeddings = []
 cluster_labels = []
@@ -59,12 +59,12 @@ for cluster_idx, cluster in enumerate(clusters):
             'memory_index': len(all_memories) - 1
         })
 
-print(f"✅ Generated {len(all_embeddings)} embeddings (384 dimensions each).")
+print(f" Generated {len(all_embeddings)} embeddings (384 dimensions each).")
 
 # ------------------------------
 # Compute pairwise cosine similarity
 # ------------------------------
-print("📐 Computing pairwise cosine similarities...")
+print(" Computing pairwise cosine similarities...")
 embedding_matrix = np.array(all_embeddings)
 similarity_matrix = cosine_similarity(embedding_matrix)
 
@@ -139,7 +139,7 @@ if 'duplicate' in results['threshold_analysis']:
     else:
         threshold_check['issues'].append({
             "label": "duplicate",
-            "status": "✅ PASS",
+            "status": " PASS",
             "message": f"Average similarity ({avg_dup:.3f}) ≥ {DUPLICATE_THRESHOLD}"
         })
 
@@ -158,7 +158,7 @@ if 'related' in results['threshold_analysis']:
     else:
         threshold_check['issues'].append({
             "label": "related",
-            "status": "✅ PASS",
+            "status": " PASS",
             "message": f"Average similarity ({avg_rel:.3f}) ≥ {RELATED_THRESHOLD}"
         })
 
@@ -180,7 +180,7 @@ if 'distinct' in results['threshold_analysis']:
     else:
         threshold_check['issues'].append({
             "label": "distinct",
-            "status": "✅ PASS",
+            "status": " PASS",
             "message": f"All distinct pairs have similarity < {RELATED_THRESHOLD}"
         })
 
@@ -189,7 +189,7 @@ results['threshold_check'] = threshold_check
 # ------------------------------
 # Save results
 # ------------------------------
-print(f"💾 Saving results to {OUTPUT_FILE}...")
+print(f"Saving results to {OUTPUT_FILE}...")
 with open(OUTPUT_FILE, 'w') as f:
     json.dump(results, f, indent=2)
 
@@ -197,13 +197,13 @@ with open(OUTPUT_FILE, 'w') as f:
 # Print summary
 # ------------------------------
 print("\n" + "="*60)
-print("📊 CALIBRATION RESULTS")
+print(" CALIBRATION RESULTS")
 print("="*60)
 
-print(f"\n✅ Total memories: {len(all_memories)}")
-print(f"✅ Total clusters: {len(clusters)}")
+print(f"\n Total memories: {len(all_memories)}")
+print(f" Total clusters: {len(clusters)}")
 
-print("\n📈 Threshold Analysis:")
+print("\n Threshold Analysis:")
 for label, data in results['threshold_analysis'].items():
     sim_data = data['pairwise_similarities']
     print(f"\n  {label.upper()}:")
@@ -211,14 +211,14 @@ for label, data in results['threshold_analysis'].items():
     print(f"    Avg similarity: {sim_data['average']:.4f}")
     print(f"    Min: {sim_data['min']:.4f}, Max: {sim_data['max']:.4f}")
 
-print("\n🔍 Threshold Check:")
+print("\n Threshold Check:")
 for issue in threshold_check['issues']:
     if 'status' in issue:
         print(f"  {issue['status']} {issue['label']}: {issue['message']}")
     else:
-        print(f"  ⚠️  {issue['label']}: {issue['issue']}")
+        print(f"    {issue['label']}: {issue['issue']}")
         print(f"     → {issue.get('recommendation', '')}")
 
 print("\n" + "="*60)
-print("✅ Calibration complete!")
-print(f"📁 Full results saved to: {OUTPUT_FILE}")
+print(" Calibration complete!")
+print(f" Full results saved to: {OUTPUT_FILE}")

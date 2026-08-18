@@ -7,7 +7,7 @@ DevMeM is a **semantic memory system** that captures engineering learnings, stor
 
 ---
 
-## 📖 Overview
+## Overview
 
 DevMeM turns raw engineering notes into structured memories. The system:
 
@@ -20,7 +20,7 @@ DevMeM turns raw engineering notes into structured memories. The system:
 
 ---
 
-## ✨ Features
+## Features
 
 | Feature | Description |
 |---------|-------------|
@@ -37,7 +37,7 @@ DevMeM turns raw engineering notes into structured memories. The system:
 
 ---
 
-## 🧰 Tech Stack
+## Tech Stack
 
 | Component | Technology |
 |-----------|------------|
@@ -51,7 +51,7 @@ DevMeM turns raw engineering notes into structured memories. The system:
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 .
@@ -82,7 +82,7 @@ DevMeM turns raw engineering notes into structured memories. The system:
 
 ---
 
-## ⚙️ Installation & Setup
+## Installation & Setup
 
 ### Prerequisites
 
@@ -128,7 +128,7 @@ The `MCP_SERVER_ENDPOINT` and `CRDB_CLUSTER_ID` are optional – they satisfy th
 ### 5. Initialise the database
 
 ```bash
-python setup_db.py   # (or migrate_db.py if you have it)
+python setup_db.py   # (or migrate_db.py)
 ```
 
 This creates:
@@ -147,7 +147,7 @@ Or use the `/seed` endpoint via the frontend (see below).
 
 ---
 
-## 🚀 Running Locally
+## Running Locally
 
 Start the server:
 
@@ -160,7 +160,7 @@ Open the frontend at `http://localhost:8000/static/index.html`.
 
 ---
 
-## 📡 API Endpoints
+## API Endpoints
 
 | Method | Endpoint | Request Body | Response |
 |--------|----------|--------------|----------|
@@ -174,7 +174,7 @@ All responses are JSON.
 
 ---
 
-## 🖥️ Frontend Usage
+## Frontend Usage
 
 1. Open `http://localhost:8000/static/index.html`.
 2. **Capture** – enter any engineering learning and click "Save Memory".
@@ -184,7 +184,7 @@ All responses are JSON.
 
 ---
 
-## 🧠 AI Models
+## AI Models
 
 - **Extraction** – `flan-t5-large` is used for accuracy; it parses raw text into structured fields. If JSON parsing fails, a fallback heuristic extracts sentences containing keywords.
 - **Synthesis** – `flan-t5-base` generates concise answers based on the top‑3 retrieved memories.
@@ -195,7 +195,7 @@ You can switch to `google/flan-t5-base` for lower memory usage by changing `HF_M
 
 ---
 
-## 🧪 Calibration & Seed Data
+## Calibration & Seed Data
 
 The `output/` folder contains:
 - `labeled_clusters.json` – generated from Hadoop bug reports (80 memories in `duplicate`/`related`/`distinct` clusters).
@@ -206,7 +206,7 @@ To re‑run calibration, run `embed_and_calibrate.py`.
 
 ---
 
-## 🔐 Security & Secrets
+## Security & Secrets
 
 **Never commit `.env` or any file containing secrets.**  
 The `.gitignore` is already configured to exclude:
@@ -219,7 +219,7 @@ All sensitive variables are loaded from the environment using `python-dotenv`.
 
 ---
 
-## ☁️ Deployment to AWS Lambda (Optional)
+## Deployment to AWS Lambda (Optional)
 
 The included `lambda_deploy.py` script packages the application and its dependencies into `lambda_package.zip`. To deploy:
 
@@ -237,7 +237,7 @@ Then upload the ZIP to your Lambda function and set:
 
 ---
 
-## 🛠️ Troubleshooting
+## Troubleshooting
 
 | Issue | Solution |
 |-------|----------|
@@ -249,7 +249,7 @@ Then upload the ZIP to your Lambda function and set:
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 This project was built for the CockroachDB Hackathon. Contributions, issues, and feature requests are welcome.  
 Please ensure:
@@ -259,13 +259,13 @@ Please ensure:
 
 ---
 
-## 📄 License
+## License
 
 To add
 
 ---
 
-## 🙏 Acknowledgements
+## Acknowledgements
 
 - **CockroachDB** for the cloud database with native vector indexing.
 - **Hugging Face** for the transformer models.
