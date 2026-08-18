@@ -1,24 +1,23 @@
-#python -m pip install -r requirements.txt
-fastapi
-uvicorn
-mangum
-psycopg2-binary
-python-dotenv
-sentence-transformers
-transformers
-torch
-torchvision
-torchaudio
-accelerate
-requests
-numpy
+# DevMeM - Living Memory System
+# Python 3.10+
+# Install: python -m pip install -r requirements.txt
 
+# Web Framework & Deployment
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+mangum==0.17.0
 
-# python -m pip install -r requirements.txt  for hugging face branch
-# fastapi
-# uvicorn
-# mangum
-# psycopg2-binary
-# python-dotenv
-# requests
-# numpy
+# Database
+psycopg2-binary==2.9.9
+
+# Configuration
+python-dotenv==1.0.0
+
+# Embeddings (includes transformers & torch as dependencies)
+sentence-transformers==2.2.2
+
+# HTTP Requests
+requests==2.31.0
+
+# Numerical Computing
+numpy==1.24.3

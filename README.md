@@ -525,6 +525,25 @@ MCP_CLUSTER_ID="your-cluster-id"
 
 ---
 
+## 📦 Dependencies
+
+See `requirements.txt` for the complete dependency list:
+
+| Component | Package | Version |
+|-----------|---------|---------|
+| Web Framework | FastAPI | 0.104.1 |
+| ASGI Server | Uvicorn | 0.24.0 |
+| Lambda Adapter | Mangum | 0.17.0 |
+| Database | psycopg2-binary | 2.9.9 |
+| Config | python-dotenv | 1.0.0 |
+| Embeddings | sentence-transformers | 2.2.2 |
+| HTTP Client | requests | 2.31.0 |
+| Numerical | numpy | 1.24.3 |
+
+**Note:** `sentence-transformers` pulls in `transformers` and `torch` automatically. These are heavy but required for the MiniLM embeddings model (used in production and optional seeding scripts).
+
+---
+
 ## 🔧 CockroachDB Integration
 
 DevMeM uses **2 CockroachDB features**:
