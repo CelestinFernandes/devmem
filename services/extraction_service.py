@@ -18,9 +18,9 @@ class ExtractionService:
                 output_text = output[0]['generated_text']
                 result = self._parse_output(output_text, raw_text)
             else:
-                result = self._manual_extract(raw_text)
+                result = {'problem': self._manual_extract('problem', raw_text)}
         except:
-            result = self._manual_extract(raw_text)
+            result = {'problem': self._manual_extract('problem', raw_text)}
         return self._ensure_fields(result, raw_text)
 
     def _parse_output(self, text: str, raw_text: str) -> Dict:
