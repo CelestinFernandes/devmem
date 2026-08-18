@@ -4,7 +4,7 @@ import numpy as np
 
 class EmbeddingService:
     def __init__(self):
-        self.api_url = "https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2"
+        self.api_url = "https://router.huggingface.co/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction"
         self.headers = {"Authorization": f"Bearer {os.getenv('HF_TOKEN', '')}"}
 
     def encode(self, text: str) -> np.ndarray:
