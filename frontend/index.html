@@ -304,7 +304,7 @@
 
 <script>
     // --- Globals ---
-    const API_BASE = '';
+    const API_BASE = 'https://aofk843md5.execute-api.ap-south-1.amazonaws.com/default';
     let currentMemoryId = null;
 
     // --- Helpers ---
@@ -329,7 +329,7 @@
         btn.disabled = true;
         btn.textContent = '⏳ Seeding...';
         try {
-            const data = await fetchJSON('/seed', { method: 'POST' });
+            const data = await fetchJSON(`${API_BASE}/seed`, { method: 'POST' });
             alert(`✅ Seeded ${data.memories_created} memories and ${data.relationships_created} relationships.`);
             loadTimeline();
         } catch (e) {
@@ -343,7 +343,7 @@
     // --- Timeline ---
     async function loadTimeline() {
         try {
-            const data = await fetchJSON('/memories');
+            const data = await fetchJSON(`${API_BASE}/memories`);
             const memories = data.memories || [];
             memoryCount.textContent = memories.length;
             if (memories.length === 0) {
@@ -376,7 +376,7 @@
 
     async function showMemoryDetail(id) {
         try {
-            const data = await fetchJSON(`/memory/${id}`);
+            const data = await fetchJSON(`${API_BASE}/memory/${id}`);
             currentMemoryId = id;
             let relHtml = '';
             if (data.related_memories && data.related_memories.length) {
@@ -426,7 +426,7 @@
         container.innerHTML = '<div class="loading" style="padding:40px;">Loading graph...</div>';
 
         try {
-            const data = await fetchJSON(`/memory/${memoryId}`);
+            const data = await fetchJSON(`${API_BASE}/memory/${memoryId}`);
             // Build nodes
             const nodes = [];
             const edges = [];
@@ -529,7 +529,7 @@
         resultEl.textContent = '⏳ Saving...';
 
         try {
-            const data = await fetchJSON('/capture', {
+            const data = await fetchJSON(`${API_BASE}/capture`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ raw_text: text })
@@ -555,7 +555,7 @@
         resultEl.innerHTML = '⏳ Thinking...';
 
         try {
-            const data = await fetchJSON('/ask', {
+            const data = await fetchJSON(`${API_BASE}/ask`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ question: q })
