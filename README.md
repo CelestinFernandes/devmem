@@ -213,3 +213,62 @@ python main.py                  # Start API server
 
 ## License
 MIT
+- Build artifacts (`deployment_package/`, `lambda_package.zip`)
+
+All sensitive variables are loaded from the environment using `python-dotenv`.
+
+---
+
+## Deployment to AWS Lambda (Optional)
+
+The included `lambda_deploy.py` script packages the application and its dependencies into `lambda_package.zip`. To deploy:
+
+```bash
+python lambda_deploy.py
+```
+
+Then upload the ZIP to your Lambda function and set:
+- **Handler**: `main.handler`
+- **Memory**: ≥ 1024 MB
+- **Timeout**: ≥ 30 seconds
+- **Environment variables**: the same as your `.env` file
+
+**Note:** This is optional – the system runs perfectly locally without any AWS services.
+
+---
+
+## Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| `ModuleNotFoundError` | Re‑run `pip install -r requirements.txt` (or the manual install) |
+| `FileNotFoundError: prompts/...` | Make sure the `prompts/` folder exists and contains both `.md` files. |
+| `psycopg2.errors.InvalidTextRepresentation` | Ensure `technologies` is passed as a list (the repository converts it to a PostgreSQL array). |
+| Model download fails | Set a Hugging Face token (`HF_TOKEN`) in your environment or log in with `hf auth login`. |
+| High memory usage | Use `flan-t5-base` instead of `-large` by changing `HF_MODEL`. |
+
+---
+
+## Contributing
+
+This project was built for the CockroachDB Hackathon. Contributions, issues, and feature requests are welcome.  
+Please ensure:
+- All secrets are externalized.
+- New AI models are documented.
+- API contracts remain backward‑compatible.
+
+---
+
+## License
+
+To add
+
+---
+
+## Acknowledgements
+
+- **CockroachDB** for the cloud database with native vector indexing.
+- **Hugging Face** for the transformer models.
+- **Open‑source community** for `sentence-transformers`, FastAPI, and `vis-network`.
+
+---
