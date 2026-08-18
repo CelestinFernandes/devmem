@@ -225,25 +225,30 @@
         }
         .graph-legend {
             display: flex;
-            gap: 16px;
-            font-size: 0.8rem;
-            padding: 8px 0;
+            gap: 20px;
+            font-size: 0.9rem;
+            padding: 12px;
+            background: #f1f5f9;
+            border-radius: 8px;
+            margin-bottom: 12px;
             flex-wrap: wrap;
+            border-left: 4px solid #2563eb;
         }
         .graph-legend span {
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 8px;
+            font-weight: 500;
         }
         .dot {
             display: inline-block;
-            width: 12px;
-            height: 12px;
+            width: 16px;
+            height: 16px;
             border-radius: 50%;
-            margin-right: 4px;
         }
-        .dot-center { background: #2563eb; border: 2px solid #1d4ed8; }
-        .dot-related { background: #22c55e; border: 2px solid #16a34a; }
+        .dot-center { background: #2563eb; }
+        .dot-related { background: #22c55e; }
+        .dot-edge { background: #64748b; }
     </style>
 </head>
 <body>
@@ -294,9 +299,9 @@
             <button onclick="closeGraph()">Close ✕</button>
         </div>
         <div class="graph-legend">
-            <span><span class="dot dot-center"></span> Center Memory</span>
-            <span><span class="dot dot-related"></span> Related Memory</span>
-            <span>🔵 Edge = Relationship</span>
+            <span><span class="dot dot-center"></span> <strong>Center Memory</strong> (your selected memory)</span>
+            <span><span class="dot dot-related"></span> <strong>Related Memory</strong> (linked learning)</span>
+            <span><span class="dot dot-edge"></span> <strong>Line</strong> = connection type</span>
         </div>
         <div id="graph-container"></div>
     </div>
@@ -314,7 +319,20 @@
 
     async function fetchJSON(url, options = {}) {
         const res = await fetch(url, options);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+            const statusMessages = {
+                400: 'Something was wrong with that request.',
+                401: 'You need to authenticate first.',
+                403: 'You don\'t have permission to do that.',
+                404: 'That resource wasn\'t found.',
+                500: 'Our server hit an issue. Try again in a moment.',
+                502: 'The server is temporarily unavailable.',
+                503: 'The service is temporarily down. Please try again soon.',
+                504: 'The request took too long. Please try again.'
+            };
+            const message = statusMessages[res.status] || `Something went wrong (${res.status}). Please try again.`;
+            throw new Error(message);
+        }
         return res.json();
     }
 
@@ -333,7 +351,7 @@
             alert(`✅ Seeded ${data.memories_created} memories and ${data.relationships_created} relationships.`);
             loadTimeline();
         } catch (e) {
-            alert('❌ Error: ' + e.message);
+            alert('⚠️ ' + e.message);
         } finally {
             btn.disabled = false;
             btn.textContent = '🌱 Seed Database';
@@ -370,7 +388,7 @@
                 el.addEventListener('click', () => showMemoryDetail(el.dataset.id));
             });
         } catch (e) {
-            timelineList.innerHTML = `<div class="loading">❌ Error: ${e.message}</div>`;
+            timelineList.innerHTML = `<div class="loading">⚠️ Couldn't load memories. ${e.message}</div>`;
         }
     }
 
@@ -404,7 +422,7 @@
             `;
             memoryDetail.classList.add('show');
         } catch (e) {
-            memoryDetail.innerHTML = `<p>❌ Error: ${e.message}</p>`;
+            memoryDetail.innerHTML = `<p>⚠️ Couldn't load that memory. ${e.message}</p>`;
             memoryDetail.classList.add('show');
         }
     }
@@ -434,13 +452,21 @@
             // Center node
             nodes.push({
                 id: data.id,
-                label: data.title.length > 30 ? data.title.substring(0, 30) + '...' : data.title,
-                color: '#2563eb',
-                font: { color: 'white', face: 'system-ui' },
-                shape: 'dot',
-                size: 35,
+                label: data.title,
+                color: { background: '#2563eb', border: '#1d4ed8', highlight: { background: '#1d4ed8', border: '#0f172a' } },
+                font: { 
+                    color: 'white', 
+                    size: 13, 
+                    bold: true, 
+                    face: 'system-ui',
+                    multi: true,
+                    bold: { size: 14 }
+                },
+                shape: 'box',
+                margin: 10,
+                widthConstraint: { maximum: 200 },
                 borderWidth: 3,
-                borderColor: '#1d4ed8'
+                title: `📌 CENTER MEMORY\nProblem: ${data.problem || 'N/A'}\nTech: ${data.technologies ? data.technologies.join(', ') : 'N/A'}`
             });
 
             // Related nodes
@@ -448,21 +474,29 @@
             related.forEach(r => {
                 nodes.push({
                     id: r.id,
-                    label: r.title.length > 30 ? r.title.substring(0, 30) + '...' : r.title,
-                    color: '#22c55e',
-                    font: { color: 'white', face: 'system-ui' },
-                    shape: 'dot',
-                    size: 25,
+                    label: r.title,
+                    color: { background: '#22c55e', border: '#16a34a', highlight: { background: '#16a34a', border: '#15803d' } },
+                    font: { 
+                        color: 'white', 
+                        size: 12, 
+                        face: 'system-ui',
+                        multi: true
+                    },
+                    shape: 'box',
+                    margin: 8,
+                    widthConstraint: { maximum: 180 },
                     borderWidth: 2,
-                    borderColor: '#16a34a'
+                    title: `🔗 RELATED (${r.relation_type})\n${r.title}`
                 });
                 edges.push({
                     from: data.id,
                     to: r.id,
                     label: r.relation_type || 'related',
-                    font: { align: 'top', size: 10 },
-                    color: '#94a3b8',
-                    width: 2
+                    font: { align: 'middle', size: 11, color: '#475569', background: { enabled: true, color: 'white' } },
+                    color: { color: '#94a3b8', highlight: '#475569' },
+                    width: 2,
+                    smooth: { type: 'continuous' },
+                    arrows: { to: { enabled: true, scaleFactor: 0.6 } }
                 });
             });
 
@@ -489,21 +523,33 @@
             const options = {
                 nodes: {
                     shape: 'dot',
-                    size: 30,
-                    font: { size: 12, face: 'system-ui' }
+                    size: 35,
+                    font: { size: 14, face: 'system-ui', bold: { color: '#000' }, multi: false },
+                    widthConstraint: { maximum: 180 }
                 },
                 edges: {
-                    smooth: { type: 'cubicBezier', roundness: 0.4 },
-                    arrows: { to: { enabled: false } }
+                    smooth: { type: 'continuous', roundness: 0.5 },
+                    font: { size: 11, align: 'middle', color: '#475569' },
+                    arrows: { to: { enabled: true, scaleFactor: 0.6 } },
+                    color: { color: '#94a3b8', highlight: '#475569' },
+                    width: 2
                 },
                 physics: {
                     enabled: true,
-                    stabilization: { iterations: 100 },
-                    barnesHut: { gravitationalConstant: -8000, springConstant: 0.001 }
+                    stabilization: { iterations: 300, fit: true },
+                    barnesHut: { 
+                        gravitationalConstant: -20000,
+                        springConstant: 0.005,
+                        springLength: 250,
+                        damping: 0.3
+                    }
                 },
                 interaction: {
                     navigationButtons: true,
-                    keyboard: true
+                    keyboard: { enabled: true },
+                    zoomView: true,
+                    dragView: true,
+                    hover: true
                 }
             };
 
@@ -511,10 +557,10 @@
             container.innerHTML = '';
             const network = new vis.Network(container, networkData, options);
 
-            // Fit view after a short delay
-            setTimeout(() => network.fit({ animation: true }), 300);
+            // Fit view after stabilization
+            setTimeout(() => network.fit({ animation: { duration: 800 } }), 600);
         } catch (e) {
-            container.innerHTML = `<div class="loading" style="color:red;">❌ Failed to load graph: ${e.message}</div>`;
+            container.innerHTML = `<div class="loading" style="color:#d97706;">⚠️ Couldn't load the knowledge graph. ${e.message}</div>`;
         }
     }
 
@@ -538,7 +584,7 @@
             document.getElementById('captureInput').value = '';
             loadTimeline();
         } catch (e) {
-            resultEl.textContent = `❌ Error: ${e.message}`;
+            resultEl.textContent = `⚠️ Couldn't save that memory. ${e.message}`;
         } finally {
             btn.disabled = false;
         }
@@ -572,7 +618,7 @@
             }
             resultEl.innerHTML = html;
         } catch (e) {
-            resultEl.innerHTML = `❌ Error: ${e.message}`;
+            resultEl.innerHTML = `⚠️ Couldn't get an answer. ${e.message}`;
         } finally {
             btn.disabled = false;
         }
