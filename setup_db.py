@@ -1,20 +1,18 @@
+import os
 import psycopg2
 
-# 1. PASTE YOUR CONNECTION STRING HERE WITH THE REAL PASSWORD
-DATABASE_URL = "postgresql://mochineko:Ck6bEvX-aSy5BJX0qUNZEg@jagged-otter-31419.j77.aws-ap-south-1.cockroachlabs.cloud:26257/defaultdb?sslmode=verify-full"
-
+DB_URL = os.getenv("DATABASE_URL")
 print("Connecting to the cloud database...")
-conn = psycopg2.connect(DATABASE_URL)
+conn = psycopg2.connect(DB_URL)
 cur = conn.cursor()
 
-# 2. Create the database we actually want to use
 cur.execute("CREATE DATABASE IF NOT EXISTS devmem_db;")
 print("✅ Database 'devmem_db' created (or already exists)")
 
 # 3. Switch to that new database
 conn.close()
-DATABASE_URL = DATABASE_URL.replace("defaultdb", "devmem_db")
-conn = psycopg2.connect(DATABASE_URL)
+DB_URL = DB_URL.replace("defaultdb", "devmem_db")
+conn = psycopg2.connect(DB_URL)
 cur = conn.cursor()
 
 # 4. Turn on Vector Search (this is mandatory for your AI)
@@ -52,9 +50,9 @@ CREATE TABLE IF NOT EXISTS relationships (
     PRIMARY KEY (memory_id_a, memory_id_b)
 );
 """)
-print("✅ Table 'relationships' created")
+print(" Table 'relationships' created")
 
 conn.commit()
 cur.close()
 conn.close()
-print("🎉 ALL DONE! Your database is ready.")
+print(" ALL DONE! Your database is ready.")

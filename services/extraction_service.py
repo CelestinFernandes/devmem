@@ -7,7 +7,7 @@ from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 class ExtractionService:
     def __init__(self, use_bedrock=False, region=None):
         self.use_bedrock = use_bedrock
-        print("🧠 Loading FLAN-T5-large for extraction...")
+        print(" Loading FLAN-T5-large for extraction...")
         self.model_name = "google/flan-t5-large"
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
         self.model = AutoModelForSeq2SeqLM.from_pretrained(self.model_name)

@@ -6,7 +6,7 @@ from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 class SynthesisService:
     def __init__(self, use_bedrock=False, region=None):
         self.use_bedrock = use_bedrock
-        print("🧠 Loading FLAN-T5-base for synthesis...")
+        print(" Loading FLAN-T5-base for synthesis...")
         self.model_name = "google/flan-t5-base"
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
         self.model = AutoModelForSeq2SeqLM.from_pretrained(self.model_name)

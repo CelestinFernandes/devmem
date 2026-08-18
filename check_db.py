@@ -22,7 +22,7 @@ for mem in memories:
 # Check relationships
 cur.execute("SELECT COUNT(*) FROM relationships")
 rel_count = cur.fetchone()
-print(f"\n🔗 Total relationships in DB: {rel_count['count']}")
+print(f"\n Total relationships in DB: {rel_count['count']}")
 
 if rel_count['count'] > 0:
     cur.execute("SELECT * FROM relationships LIMIT 5")

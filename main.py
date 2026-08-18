@@ -30,7 +30,7 @@ print("🚀 Initializing DevMeM backend...")
 repo = CockroachRepository(DB_URL)
 
 # 2. Embedding model
-print("🧠 Loading MiniLM...")
+print(" Loading MiniLM...")
 model = SentenceTransformer('all-MiniLM-L6-v2')
 
 # 3. Memory service

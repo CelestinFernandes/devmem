@@ -51,7 +51,7 @@ def mock_bedrock_extract(raw_text):
 if __name__ == "__main__":
     test_text = "My Kubernetes pod got OOMKilled yesterday because memory limit was 512Mi but it needed 1Gi."
     result = mock_bedrock_extract(test_text)
-    print("✅ Mock Extraction Result:")
+    print(" Mock Extraction Result:")
     print(json.dumps(result, indent=2))
     
     # Now test it with your embedding model

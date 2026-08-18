@@ -22,7 +22,7 @@ conn = psycopg2.connect(DB_URL_DEV)
 cur = conn.cursor()
 
 # 3. Enable Vector extension
-print("🧠 Enabling pgvector...")
+print(" Enabling pgvector...")
 cur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
 
 # 4. Create memories table

@@ -7,7 +7,7 @@ from sentence_transformers import SentenceTransformer
 DB_URL = os.getenv("DATABASE_URL")
 DB_URL = f"{DB_URL}"
 
-print("🧠 Loading MiniLM...")
+print(" Loading MiniLM...")
 model = SentenceTransformer('all-MiniLM-L6-v2')
 
 good_memories = [
