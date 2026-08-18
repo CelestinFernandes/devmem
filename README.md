@@ -267,9 +267,11 @@ Return to Frontend (answer + sources with similarity scores)
 | **API Gateway** | AWS API Gateway | REST proxy | Routing, CORS, rate-limiting |
 | **Compute** | AWS Lambda | Serverless backend | Auto-scaling, pay-per-request |
 | **Application** | FastAPI + Python | Business logic | Fast, type-safe, async |
-| **Vectors** | CockroachDB vector type | Semantic search | Native support, no separate store |
-| **Embeddings** | HuggingFace MiniLM | 384-dim vectors | Fast, lightweight, accurate |
-| **AI** | Google Gemini 3.6 Flash | Extraction & synthesis | Low cost, high quality |
+| **Vector Storage** | CockroachDB vector(384) | Store & index embeddings | Native vector type, <=> similarity operator |
+| **Vector Generation** | HuggingFace MiniLM | Generate 384-dim vectors | Fast, lightweight, accurate |
+| **Vector Search** | CockroachDB IVFFlat | Semantic search (O(1) lookup) | Distributed indexing, no separate store |
+| **AI Extraction** | Google Gemini 3.6 Flash | Parse problem/cause/fix/lesson | Low cost, high quality |
+| **AI Synthesis** | Google Gemini 3.6 Flash | Generate answers with context | Low cost, high quality |
 | **Deployment** | Netlify (frontend) | Static hosting | Fast CDN, auto-deploy |
 | **Deployment** | AWS Lambda + API GW | Backend | Serverless, scalable |
 
