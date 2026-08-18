@@ -31,7 +31,7 @@ async def ask_question(request: AskRequest):
         raise HTTPException(status_code=500, detail="Services not initialized")
 
     # 1. Generate embedding for the question
-    question_embedding = memory_service.model.encode(request.question).tolist()
+    question_embedding = memory_service.embedding_service.encode(request.question).tolist()
 
     # 2. Vector search (top 3)
     results = memory_service.repo.vector_search(question_embedding, limit=3)
