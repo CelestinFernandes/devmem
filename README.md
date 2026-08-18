@@ -2,7 +2,7 @@
 
 > An AI-powered system that captures, organizes, and retrieves developer memories using semantic search and vector embeddings.
 
-**🎬 [Demo](https://devmem.netlify.app/) | 📹 [Video Demo](#) (coming soon) | 🏗️ [Architecture](#architecture)**
+**🎬 [Demo](https://devmem.netlify.app/) | 📹 [Video Demo](https://youtu.be/oAqDkIEe6oU) | 🏗️ [Architecture](#architecture)**
 
 ---
 
@@ -20,31 +20,14 @@ cp .env.example .env
 python setup_db.py
 ```
 
-This creates:
-- `devmem_db` database (if not exists)
-- `memories` table with `vector(384)` column for embeddings
-- `relationships` table for linking related memories
-- Vector indexing for fast similarity search
-
-### 3. (Optional) Seed with Sample Memories
-
-**Option A: Quick local test with 3 examples**
-```bash
-python seed_good_memories.py
-```
-
-**Option B: Bulk seed via API/UI**
-- Use the **Seed Database** button in the web UI, or
-- `POST /seed` endpoint (loads from `output/labeled_clusters.json`)
-
-### 4. Run Locally
+### 3. Run Locally
 ```bash
 python main.py
 # Visit http://localhost:8000
 ```
 
-### 5. Deploy to Netlify (Frontend) + AWS Lambda (Backend)
-See [Deployment Guide](#-deployment) below.
+### 4. Deploy to Netlify (Frontend) + AWS Lambda (Backend)
+See [Deployment Guide](#deployment) below.
 
 ---
 
@@ -68,36 +51,229 @@ DevMeM learns from your past issues and solutions. When you:
 
 ## 🏗️ Architecture
 
+### System Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          DEVELOPER (User)                                   │
+└────────────────────────────────┬────────────────────────────────────────────┘
+                                 │
+                    ┌────────────┴────────────┐
+                    │                         │
+            ┌───────▼────────┐        ┌──────▼──────────┐
+            │   NETLIFY CDN  │        │  AWS API GW     │
+            │  (Frontend)    │        │  (REST Proxy)   │
+            │ index.html     │        │                 │
+            └────────────────┘        └────────┬────────┘
+                                               │
+                                      ┌────────▼─────────┐
+                                      │  AWS LAMBDA      │
+                                      │  (main.handler)  │
+                                      │                  │
+                                      │ ┌──────────────┐ │
+                                      │ │ FastAPI App  │ │
+                                      │ │              │ │
+                                      │ │ • /capture   │ │
+                                      │ │ • /ask       │ │
+                                      │ │ • /memories  │ │
+                                      │ │ • /seed      │ │
+                                      │ └──────────────┘ │
+                                      └─────────┬────────┘
+                                                │
+                    ┌───────────────────────────┼───────────────────────────┐
+                    │                           │                           │
+         ┌──────────▼─────────┐      ┌─────────▼──────────┐    ┌──────────▼──────┐
+         │ HUGGING FACE       │      │ GOOGLE GEMINI      │    │ COCKROACHDB     │
+         │ (Embeddings)       │      │ (AI Agent)         │    │ CLOUD           │
+         │                    │      │                    │    │                 │
+         │ • MiniLM           │      │ • Extract memory   │    │ ┌─────────────┐ │
+         │ • 384-dim vectors  │      │   (problem, cause) │    │ │  memories   │ │
+         │ • Encode text      │      │ • Synthesize       │    │ │  table      │ │
+         │                    │      │   answers          │    │ │             │ │
+         └────────────────────┘      └────────────────────┘    │ │ • id (UUID) │ │
+                  ▲                                            │ │ • title     │ │
+                  │                                            │ │ • problem   │ │
+                  │                                            │ │ • cause     │ │
+                  │                                            │ │ • fix       │ │
+                  │                                            │ │ • lesson    │ │
+                  └────────────────────────────────────────────┼─┤ • embedding │ │
+                                                               │ │   (384-dim) │ │
+                         ┌─────────────────────────────────────┼─┤ • confidence│ │
+                         │                                     │ │ • frequency │ │
+                         │                                     │ │ • created_at│ │
+                         │                                     │ │             │ │
+                         │                                     │ ├─────────────┤ │
+                         │                                     │ │relationshps │ │
+                         │                                     │ │  table      │ │
+                         │                                     │ │             │ │
+                         │                                     │ │ • memory_a  │ │
+                         │                                     │ │ • memory_b  │ │
+                         │                                     │ │ • rel_type  │ │
+                         │                                     │ └─────────────┘ │
+                         │                                     │                 │
+                         │                                     │ Vector Search: │
+                         │                                     │ <=> operator   │
+                         │                                     │ (IVFFlat idx)  │
+                         │                                     └─────────────────┘
+                         │
+                ┌────────▼──────────┐
+                │ MCP (optional)    │
+                │ Model Context     │
+                │ Protocol          │
+                │                   │
+                │ • Read-only agent │
+                │   connectivity    │
+                │ • Audit logging   │
+                │ • Role-based      │
+                │   access          │
+                └───────────────────┘
+```
+
+### Data Flow: Capture Learning
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│ 1. Developer enters raw text in frontend                       │
+│    "Pod crashed with OOMKilled. Increased memory to 1Gi"       │
+└────────────────────┬─────────────────────────────────────────┘
+                     │
+                     ▼
+┌────────────────────────────────────────────────────────────────┐
+│ 2. POST /capture → Lambda → ExtractionService                 │
+│    Gemini parses: problem, cause, fix, lesson, technologies   │
+└────────────────────┬─────────────────────────────────────────┘
+                     │
+                     ▼
+┌────────────────────────────────────────────────────────────────┐
+│ 3. EmbeddingService (HuggingFace MiniLM)                       │
+│    Generates 384-dim vector from: problem + cause + techs      │
+└────────────────────┬─────────────────────────────────────────┘
+                     │
+                     ▼
+┌────────────────────────────────────────────────────────────────┐
+│ 4. CockroachDB Vector Search (similarity > 0.90)              │
+│    If duplicate found:                                         │
+│    • Bump confidence (+0.05)                                   │
+│    • Increment frequency (+1)                                  │
+│    • Return "duplicate" status                                 │
+│    Else: Continue                                              │
+└────────────────────┬─────────────────────────────────────────┘
+                     │
+                     ▼
+┌────────────────────────────────────────────────────────────────┐
+│ 5. Save Memory to CockroachDB                                  │
+│    • Insert into memories table with embedding                 │
+│    • Generate relationships (similarity > 0.75)                │
+│    • Return memory_id + related_count                          │
+└────────────────────┬─────────────────────────────────────────┘
+                     │
+                     ▼
+┌────────────────────────────────────────────────────────────────┐
+│ 6. Frontend receives response                                  │
+│    Status: "new" | "duplicate"                                 │
+│    Refresh timeline                                            │
+└────────────────────────────────────────────────────────────────┘
+```
+
+### Data Flow: Ask Question
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│ 1. Developer asks: "How do I fix OOM errors?"                  │
+│    POST /ask                                                   │
+└────────────────────┬─────────────────────────────────────────┘
+                     │
+                     ▼
+┌────────────────────────────────────────────────────────────────┐
+│ 2. EmbeddingService (HuggingFace)                             │
+│    Encode question to 384-dim vector                           │
+└────────────────────┬─────────────────────────────────────────┘
+                     │
+                     ▼
+┌────────────────────────────────────────────────────────────────┐
+│ 3. CockroachDB Vector Search                                   │
+│    Find top-3 most similar memories                            │
+│    ORDER BY: embedding <=> query_vector                        │
+│    (Using IVFFlat index for speed)                             │
+└────────────────────┬─────────────────────────────────────────┘
+                     │
+                     ▼
+┌────────────────────────────────────────────────────────────────┐
+│ 4. SynthesisService (Gemini)                                   │
+│    Build prompt with retrieved memories:                       │
+│    • Problem 1, Fix 1, Lesson 1                                │
+│    • Problem 2, Fix 2, Lesson 2                                │
+│    • Problem 3, Fix 3, Lesson 3                                │
+│    + original question                                         │
+│    Generate answer using Gemini                                │
+└────────────────────┬─────────────────────────────────────────┘
+                     │
+                     ▼
+┌────────────────────────────────────────────────────────────────┐
+│ 5. Return Response                                             │
+│    {                                                           │
+│      "answer": "Based on past experience...",                  │
+│      "sources": [                                              │
+│        {id, title, similarity},                                │
+│        {id, title, similarity},                                │
+│        {id, title, similarity}                                 │
+│      ]                                                         │
+│    }                                                           │
+└────────────────────────────────────────────────────────────────┘
+```
+
+### Component Interaction Matrix
+
+| Component | CockroachDB | Gemini | HF Embed | AWS Lambda | Netlify |
+|-----------|-------------|--------|----------|-----------|---------|
+| **Frontend** | ← → (via Lambda) | ← (via Lambda) | ← (via Lambda) | ← → | ✓ Hosted |
+| **Lambda/FastAPI** | ← → (SQL) | ← → (REST) | ← → (REST) | ✓ Host | ← GET |
+| **CockroachDB** | ✓ DB | - | - | ← → (queries) | - |
+| **Gemini** | - | ✓ API | - | ← → (requests) | - |
+| **HF Embed** | - | - | ✓ API | ← → (requests) | - |
+
+---
+
 ### High-Level Flow
+
 ```
-Developer Input (raw text)
+Developer Input
     ↓
-Extraction Service (AI parses: problem, cause, fix, lesson)
+Extraction Service (Gemini parses: problem, cause, fix, lesson)
     ↓
-Embedding Service (Hugging Face: 384-dim vector)
+Embedding Service (HuggingFace generates 384-dim vector)
     ↓
-Vector Search (find similar memories in CockroachDB)
+Vector Search (CockroachDB finds similar memories via <=> operator)
     ↓
-Duplicate Detection (>90% match) → bump confidence
-Related Detection (>75% match) → create relationship
+Decision Point:
+    ├─ Similarity > 0.90? → Mark as duplicate, bump confidence
+    ├─ Similarity > 0.75? → Create relationship link
+    └─ Otherwise → Save as new memory
     ↓
-Store in CockroachDB with embedding
+Store in CockroachDB (memory + embedding + metadata)
     ↓
-Synthesis Service (AI generates response using retrieved memories)
+Synthesis Service (Gemini generates answer using retrieved context)
     ↓
-Return answer to developer
+Return to Frontend (answer + sources with similarity scores)
 ```
 
-### Components
+---
 
-| Component | Purpose | Tech |
-|-----------|---------|------|
-| **Frontend** | Web UI for capture/ask/explore | Static HTML/JS, Netlify |
-| **Backend API** | REST endpoints | FastAPI, AWS Lambda |
-| **Database** | Store memories + vectors | CockroachDB Cloud |
-| **Embedding** | Generate vectors | Hugging Face (MiniLM) |
-| **Extraction** | Parse learnings | Gemini 3.6 Flash |
-| **Synthesis** | Generate answers | Gemini 3.6 Flash |
+### Key Technologies by Layer
+
+| Layer | Technology | Purpose | Why |
+|-------|-----------|---------|-----|
+| **Presentation** | HTML5 + JS | Web UI | Lightweight, no build required |
+| **API Gateway** | AWS API Gateway | REST proxy | Routing, CORS, rate-limiting |
+| **Compute** | AWS Lambda | Serverless backend | Auto-scaling, pay-per-request |
+| **Application** | FastAPI + Python | Business logic | Fast, type-safe, async |
+| **Vectors** | CockroachDB vector type | Semantic search | Native support, no separate store |
+| **Embeddings** | HuggingFace MiniLM | 384-dim vectors | Fast, lightweight, accurate |
+| **AI** | Google Gemini 3.6 Flash | Extraction & synthesis | Low cost, high quality |
+| **Deployment** | Netlify (frontend) | Static hosting | Fast CDN, auto-deploy |
+| **Deployment** | AWS Lambda + API GW | Backend | Serverless, scalable |
+
+---
 
 ---
 
