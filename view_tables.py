@@ -3,6 +3,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 
 DB_URL = os.getenv("DATABASE_URL")
+DB_URL = os.getenv("DATABASE_URL")
 
 conn = psycopg2.connect(DB_URL)
 cur = conn.cursor(cursor_factory=RealDictCursor)
@@ -16,12 +17,14 @@ cur.execute("""
 """)
 tables = cur.fetchall()
 print(" Tables in devmem_db:")
+print(" Tables in devmem_db:")
 for t in tables:
     print(f"  - {t['table_name']}")
 
 # Show memories
 cur.execute("SELECT id, title, confidence, status, created_at FROM memories ORDER BY created_at DESC;")
 memories = cur.fetchall()
+print(f"\n Memories ({len(memories)} total):")
 print(f"\n Memories ({len(memories)} total):")
 for m in memories:
     print(f"  - {m['title'][:40]}... (conf: {m['confidence']}, status: {m['status']})")

@@ -1,0 +1,24 @@
+#python -m pip install -r requirements.txt
+fastapi
+uvicorn
+mangum
+psycopg2-binary
+python-dotenv
+sentence-transformers
+transformers
+torch
+torchvision
+torchaudio
+accelerate
+requests
+numpy
+
+
+# python -m pip install -r requirements.txt  for hugging face branch
+# fastapi
+# uvicorn
+# mangum
+# psycopg2-binary
+# python-dotenv
+# requests
+# numpy
